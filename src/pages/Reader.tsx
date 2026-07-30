@@ -207,7 +207,7 @@ function Reader() {
               //<div style={{ flex: 1, display: view === "reader" ? "flex" : "none", flexDirection: "column", minHeight: 0, height: '100vh' }}>
     return (
         <>
-        <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ width: '100svw', height: '100svh', display: 'flex', flexDirection: 'column' }}>
             <Toolbar
               onOpenFile={openFile}
               onGoToLibrary={handleGoToLibrary}
