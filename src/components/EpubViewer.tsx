@@ -77,7 +77,11 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
   const touchStartTime = useRef(0);
   const [resizeCounter, setResizeCounter] = useState(0);
   const currentCfiRef = useRef<string | null>(null);
-  const selectionHandledRef = useRef(false);
+  const pendingSelText = useRef("");
+  const pendingSelRect = useRef({ x: 0, y: 0 });
+  const pendingSelWidth = useRef(0);
+  const pendingSelCfi = useRef<string | null>(null);
+  const touchHandledPopup = useRef(false);
 
   useImperativeHandle(ref, () => ({
     clearHighlight: () => {
@@ -182,8 +186,6 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
         doc.addEventListener("selectionchange", () => {
           clearTimeout(selTimer);
           selTimer = setTimeout(() => {
-            if (selectionHandledRef.current) return;
-
             const selection = contents.window.getSelection();
             const text = selection?.toString().trim();
             if (!text || selection?.isCollapsed) return;
@@ -199,18 +201,11 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
               rect.y += iframeRect.top;
             }
 
-            if (lastCfiRef.current) {
-              rendition.annotations.remove(lastCfiRef.current, "highlight");
-            }
+            pendingSelText.current = text;
+            pendingSelRect.current = { x: rect.x, y: rect.y };
+            pendingSelWidth.current = viewerRef.current?.clientWidth ?? 0;
             const cfirange = contents.cfiFromRange(range);
-            lastCfiRef.current = cfirange;
-            rendition.annotations.highlight(cfirange, {});
-
-            selectionHandledRef.current = true;
-            setTimeout(() => { selectionHandledRef.current = false; }, 200);
-
-            const viewerWidth = viewerRef.current?.clientWidth ?? 0;
-            onTextSelected?.(text, rect.x, rect.y, viewerWidth);
+            pendingSelCfi.current = cfirange;
           }, 200);
         });
       });
@@ -236,6 +231,9 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
         touchStartX.current = e.changedTouches[0].screenX;
         touchStartY.current = e.changedTouches[0].screenY;
         touchStartTime.current = Date.now();
+        pendingSelText.current = "";
+        pendingSelCfi.current = null;
+        touchHandledPopup.current = false;
       });
 
       rendition.on("touchend", (e: TouchEvent) => {
@@ -247,11 +245,35 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
         if (elapsed < 300 && Math.abs(deltaX) > threshold && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
           if (deltaX < 0) rendition.next();
           else rendition.prev();
+          return;
+        }
+
+        // No swipe — check for pending selection
+        if (pendingSelText.current) {
+          if (lastCfiRef.current) {
+            rendition.annotations.remove(lastCfiRef.current, "highlight");
+          }
+          if (pendingSelCfi.current) {
+            rendition.annotations.highlight(pendingSelCfi.current, {});
+          }
+          lastCfiRef.current = pendingSelCfi.current;
+
+          touchHandledPopup.current = true;
+          setTimeout(() => { touchHandledPopup.current = false; }, 200);
+
+          onTextSelected?.(
+            pendingSelText.current,
+            pendingSelRect.current.x,
+            pendingSelRect.current.y,
+            pendingSelWidth.current,
+          );
+          pendingSelText.current = "";
+          pendingSelCfi.current = null;
         }
       });
 
       rendition.on("mouseup", (_e: MouseEvent, contents: any) => {
-        if (selectionHandledRef.current) return;
+        if (touchHandledPopup.current) return;
         window.dispatchEvent(new CustomEvent("viewer-interaction"));
         const selection = contents.window.getSelection();
         const text = selection?.toString().trim();
