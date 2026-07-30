@@ -134,13 +134,38 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
           color: "var(--text)",
         }}
       >
-        <div style={{ fontSize: 24 * fontSize / 100, fontWeight: 700, marginTop: 16 }}>Review Complete!</div>
-        <div style={{ fontSize: 16 * fontSize / 100 }}>
+        <div
+          style={{
+            fontSize: 28 * fontSize / 100,
+            fontWeight: 700,
+            marginTop: 32,
+            color: "var(--text-h)",
+          }}
+        >
+          Review Complete!
+        </div>
+        <div
+          style={{
+            fontSize: 16 * fontSize / 100,
+            color: "var(--text-secondary)",
+            background: "var(--bg-secondary)",
+            padding: "16px 24px",
+            borderRadius: "var(--radius)",
+            textAlign: "center",
+          }}
+        >
           {correctCount} / {cards.length} correct ({attemptCount} attempts)
         </div>
         {retries.length > 0 && (
           <div style={{ width: "100%", maxWidth: 500 }}>
-            <div style={{ fontSize: 14 * fontSize / 100, fontWeight: 600, marginBottom: 8, color: "#f87171" }}>
+            <div
+              style={{
+                fontSize: 14 * fontSize / 100,
+                fontWeight: 600,
+                marginBottom: 8,
+                color: "var(--text-h)",
+              }}
+            >
               Cards that need practice ({retries.length}):
             </div>
             {retries.map(([id, count]) => {
@@ -155,17 +180,25 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
                     alignItems: "center",
                     padding: "8px 12px",
                     marginBottom: 4,
-                    borderRadius: 6,
-                    background: "var(--bg, #fff)",
-                    border: "1px solid var(--border, #eee)",
+                    borderRadius: "var(--radius-sm)",
+                    background: "var(--surface)",
+                    border: "1px solid var(--border)",
                     fontSize: 13 * fontSize / 100,
                     gap: 8,
                   }}
                 >
-                  <span style={{ flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  <span
+                    style={{
+                      flex: 1,
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                      whiteSpace: "nowrap",
+                      color: "var(--text)",
+                    }}
+                  >
                     {c.original}
                   </span>
-                  <span style={{ color: "#f87171", fontWeight: 600, whiteSpace: "nowrap" }}>
+                  <span style={{ color: "#ef4444", fontWeight: 600, whiteSpace: "nowrap" }}>
                     {count} {count === 1 ? "retry" : "retries"}
                   </span>
                 </div>
@@ -173,7 +206,21 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
             })}
           </div>
         )}
-        <button onClick={handleExit} style={{ padding: "8px 20px", fontSize: 14 * fontSize / 100, cursor: "pointer", marginBottom: 16 }}>
+        <button
+          onClick={handleExit}
+          style={{
+            padding: "10px 24px",
+            fontSize: 14 * fontSize / 100,
+            fontWeight: 600,
+            cursor: "pointer",
+            background: "var(--accent)",
+            color: "#fff",
+            border: "none",
+            borderRadius: "var(--radius-sm)",
+            marginTop: 8,
+            transition: "all 0.15s",
+          }}
+        >
           Back to Flashcards
         </button>
       </div>
@@ -182,15 +229,35 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: 24 }}>
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-        <div style={{ fontSize: 13 * fontSize / 100, color: "var(--text)" }}>
-          Cards remaining: {queue.length}
-        </div>
-        <div style={{ fontSize: 13 * fontSize / 100, color: "var(--text)" }}>
-          Correct: {correctCount} / {attemptCount}
-        </div>
-        <button onClick={handleExit} style={{ fontSize: 12 * fontSize / 100, cursor: "pointer" }}>
-          Exit Review
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 16,
+          gap: 12,
+        }}
+      >
+        <span style={{ fontSize: 13 * fontSize / 100, color: "var(--text-secondary)", fontWeight: 500 }}>
+          {queue.length} card{queue.length !== 1 ? "s" : ""} remaining
+        </span>
+        <span style={{ fontSize: 13 * fontSize / 100, color: "var(--text-secondary)", fontWeight: 500 }}>
+          {correctCount} / {attemptCount} correct
+        </span>
+        <button
+          onClick={handleExit}
+          style={{
+            fontSize: 12 * fontSize / 100,
+            cursor: "pointer",
+            background: "transparent",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-sm)",
+            padding: "4px 12px",
+            color: "var(--text-secondary)",
+            transition: "all 0.15s",
+          }}
+        >
+          Exit
         </button>
       </div>
 
@@ -208,13 +275,14 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
           style={{
             width: "100%",
             maxWidth: 500,
-            borderRadius: 8,
-            background: "#c084fc",
+            borderRadius: "var(--radius-lg)",
+            background: "linear-gradient(135deg, #f97316, #fb923c)",
             color: "#fff",
-            padding: "32px 24px",
+            padding: "36px 28px",
             fontSize: 18 * fontSize / 100,
             lineHeight: 1.5,
             textAlign: "center",
+            boxShadow: "var(--shadow-md)",
           }}
         >
           {current.original}
@@ -232,15 +300,18 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
           style={{
             width: "100%",
             maxWidth: 500,
-            padding: "10px 14px",
+            padding: "12px 14px",
             fontSize: 15 * fontSize / 100,
-            border: "1px solid var(--border, #ddd)",
-            borderRadius: 6,
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius)",
             outline: "none",
             boxSizing: "border-box",
-            color: "var(--text, #333)",
-            background: "var(--bg, #fff)",
+            color: "var(--text)",
+            background: "var(--surface)",
+            transition: "border-color 0.15s",
           }}
+          onFocus={(e) => e.target.style.borderColor = "var(--accent)"}
+          onBlur={(e) => e.target.style.borderColor = "var(--border)"}
         />
 
         {status === "prompt" && (
@@ -248,14 +319,15 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
             onClick={handleSubmit}
             disabled={!input.trim()}
             style={{
-              padding: "8px 24px",
+              padding: "10px 28px",
               fontSize: 14 * fontSize / 100,
               fontWeight: 600,
               cursor: "pointer",
-              background: "#34d399",
-              color: "#fff",
+              background: input.trim() ? "var(--accent)" : "var(--border)",
+              color: input.trim() ? "#fff" : "var(--text-secondary)",
               border: "none",
-              borderRadius: 6,
+              borderRadius: "var(--radius-sm)",
+              transition: "all 0.15s",
             }}
           >
             Submit
@@ -267,10 +339,13 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
             style={{
               fontSize: 15 * fontSize / 100,
               fontWeight: 600,
-              color: "#34d399",
+              color: "#10b981",
+              padding: "10px 24px",
+              background: "rgba(16, 185, 129, 0.1)",
+              borderRadius: "var(--radius-sm)",
             }}
           >
-            ✓ Correct
+            ✓ Correct! Next card in 5s…
           </div>
         )}
 
@@ -281,13 +356,17 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
               flexDirection: "column",
               alignItems: "center",
               gap: 12,
+              padding: "14px 24px",
+              background: "rgba(239, 68, 68, 0.08)",
+              borderRadius: "var(--radius)",
+              maxWidth: 500,
             }}
           >
-            <div style={{ fontSize: 15 * fontSize / 100, fontWeight: 600, color: "#f87171" }}>
+            <div style={{ fontSize: 15 * fontSize / 100, fontWeight: 600, color: "#ef4444" }}>
               ✗ Incorrect
             </div>
-            <div style={{ fontSize: 14 * fontSize / 100, color: "var(--text)" }}>
-              The answer was: <strong>{current.translation}</strong>
+            <div style={{ fontSize: 14 * fontSize / 100, color: "var(--text)", textAlign: "center" }}>
+              The answer was: <strong style={{ color: "var(--text-h)" }}>{current.translation}</strong>
             </div>
             <button
               onClick={handleNext}
@@ -296,10 +375,10 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
                 fontSize: 14 * fontSize / 100,
                 fontWeight: 600,
                 cursor: "pointer",
-                background: "#60a5fa",
+                background: "var(--accent)",
                 color: "#fff",
                 border: "none",
-                borderRadius: 6,
+                borderRadius: "var(--radius-sm)",
               }}
             >
               Next

@@ -6,6 +6,7 @@ export type LibraryBook = {
   title: string;
   author: string;
   coverPath?: string;
+  lastLocation?: string;
   addedAt: number;
   lastReadAt: number;
 };
@@ -65,5 +66,15 @@ export function useLibrary() {
     });
   }, []);
 
-  return { books, addBook, removeBook };
+  const updateBookLocation = useCallback((id: string, cfi: string) => {
+    setBooks((prev) => {
+      const updated = prev.map((b) =>
+        b.id === id ? { ...b, lastLocation: cfi, lastReadAt: Date.now() } : b,
+      );
+      saveLibrary(updated);
+      return updated;
+    });
+  }, []);
+
+  return { books, addBook, removeBook, updateBookLocation };
 }

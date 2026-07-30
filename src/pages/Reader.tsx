@@ -1,6 +1,6 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile, remove, BaseDirectory } from "@tauri-apps/plugin-fs";
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import ePub from 'epubjs';
 import EpubViewer, { type EpubViewerHandle } from "../components/EpubViewer";
 import Toolbar from "../components/Toolbar";
@@ -42,7 +42,7 @@ async function extractCover(book: any, id: string): Promise<string | undefined> 
 
 function Reader() {
     const { fontSize } = useSettings();
-    const { books, addBook, removeBook } = useLibrary();
+    const { books, addBook, removeBook, updateBookLocation } = useLibrary();
     const { flashcards, addFlashcard, updateFlashcardStats, removeFlashcard } = useFlashcards();
     const viewerRef = useRef<EpubViewerHandle>(null);
     const [filePath, setFilePath] = useState<string | null>(null);
@@ -54,6 +54,31 @@ function Reader() {
       y: number;
       viewerWidth?: number;
     } | null>(null);
+
+    const currentBook = books.find((b) => b.filePath === filePath);
+    const initialLocation = currentBook?.lastLocation;
+
+    const handleLocationChange = useCallback(
+      (cfi: string) => {
+        if (currentBook) {
+          updateBookLocation(currentBook.id, cfi);
+        }
+      },
+      [currentBook, updateBookLocation],
+    );
+
+    const [isDark, setIsDark] = useState(() =>
+      document.documentElement.getAttribute("data-theme") === "dark"
+    );
+
+    useEffect(() => {
+      const observer = new MutationObserver(() => {
+        setIsDark(document.documentElement.getAttribute("data-theme") === "dark");
+      });
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+      return () => observer.disconnect();
+    }, []);
+
     const { translate, translating } = useTranslation();
 
     async function openFile() {
@@ -179,35 +204,69 @@ function Reader() {
       removeBook(bookId);
     }, [books, removeBook]);
 
+              //<div style={{ flex: 1, display: view === "reader" ? "flex" : "none", flexDirection: "column", minHeight: 0, height: '100vh' }}>
     return (
         <>
+        <div style={{ width: '100vw', height: '100vh', display: 'flex', flexDirection: 'column' }}>
             <Toolbar
               onOpenFile={openFile}
               onGoToLibrary={handleGoToLibrary}
               onGoToFlashcards={handleGoToFlashcards}
             />
-            <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative" }}>
-              <div style={{ flex: 1, display: view === "reader" ? "flex" : "none", flexDirection: "column" }}>
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", minHeight: 0 }}>
+              <div style={{
+                          flex: 1, 
+                          display: "flex", // Keep this always flex so sizes are tracked
+                          flexDirection: "column", 
+                          minHeight: 0, 
+                          // If it's not the reader view, hide it visually but keep its layout intact
+                          visibility: view === "reader" ? "visible" : "hidden",
+                          pointerEvents: view === "reader" ? "auto" : "none",
+                          zIndex: view === "reader" ? 1 : -1
+                          }}>
                 <EpubViewer
                   ref={viewerRef}
                   filePath={filePath}
                   fontSize={fontSize}
+                  darkMode={isDark}
+                  initialLocation={initialLocation}
+                  onLocationChange={handleLocationChange}
                   onTextSelected={handleTextSelected}
                 />
               </div>
-              <div style={{ flex: 1, display: view === "library" ? "flex" : "none", flexDirection: "column" }}>
+              <div style={{ flex: 1, display: view === "library" ? "flex" : "none", flexDirection: "column", minHeight: 0 }}>
                 <Library
                   books={books}
                   onOpenBook={handleOpenBook}
                   onRemoveBook={handleRemoveBook}
                 />
               </div>
-              <div style={{ flex: 1, display: view === "flashcards" ? "flex" : "none", flexDirection: "column" }}>
+              <div style={{ flex: 1, display: view === "flashcards" ? "flex" : "none", flexDirection: "column", minHeight: 0 }}>
                 <Flashcards
                   flashcards={flashcards}
                   onRemoveFlashcard={removeFlashcard}
                   onUpdateFlashcardStats={updateFlashcardStats}
                 />
+              </div>
+              <div
+                style={{
+                  flexShrink: 0,
+                  textAlign: "center",
+                  padding: "10px 16px",
+                  borderTop: "1px solid var(--border)",
+                  background: "var(--surface)",
+                }}
+              >
+                <span
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 15,
+                    color: "var(--accent)",
+                    letterSpacing: "-0.3px",
+                  }}
+                >
+                  CharLingo
+                </span>
               </div>
             </div>
             {popup && (
@@ -221,6 +280,7 @@ function Reader() {
                 onSaveFlashcard={handleSaveFlashcard}
               />
             )}
+        </div>
         </>
     );
 }

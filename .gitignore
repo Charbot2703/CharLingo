@@ -12,6 +12,14 @@ dist
 dist-ssr
 *.local
 
+# Android build output
+src-tauri/gen/android/app/build/
+src-tauri/gen/android/build/
+
+# Keystore and signing secrets
+**/*.jks
+**/keystore.properties
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

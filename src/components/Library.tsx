@@ -8,7 +8,7 @@ type LibraryProps = {
   onRemoveBook: (id: string) => void;
 };
 
-const COLORS = ["#c084fc", "#60a5fa", "#f472b6", "#34d399", "#fbbf24", "#f87171"];
+const COLORS = ["#f97316", "#d97706", "#f43f5e", "#14b8a6", "#eab308", "#f87171"];
 
 function CoverImage({ coverPath }: { coverPath?: string }) {
   const [url, setUrl] = useState<string | null>(null);
@@ -33,7 +33,7 @@ function CoverImage({ coverPath }: { coverPath?: string }) {
 
   if (url) {
     return (
-      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+      <img src={url} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", position: "absolute", inset: 0 }} />
     );
   }
   return null;
@@ -51,13 +51,14 @@ function BookCard({ book, color, onOpenBook, onRemoveBook }: {
     <div
       style={{
         position: "relative",
-        borderRadius: 8,
+        borderRadius: "var(--radius)",
         overflow: "hidden",
         border: "1px solid var(--border)",
-        background: "var(--bg)",
+        background: "var(--surface)",
         cursor: "pointer",
-        boxShadow: hover ? "0 4px 12px rgba(0,0,0,0.15)" : "none",
-        transition: "box-shadow 0.2s",
+        boxShadow: hover ? "var(--shadow-md)" : "var(--shadow-sm)",
+        transform: hover ? "translateY(-2px)" : "none",
+        transition: "all 0.2s",
       }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -66,11 +67,11 @@ function BookCard({ book, color, onOpenBook, onRemoveBook }: {
         <div
           style={{
             height: 200,
-            background: color,
+            background: `linear-gradient(135deg, ${color}, ${color}dd)`,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            fontSize: 48,
+            fontSize: 52,
             color: "#fff",
             fontWeight: 700,
             userSelect: "none",
@@ -81,7 +82,7 @@ function BookCard({ book, color, onOpenBook, onRemoveBook }: {
           <CoverImage coverPath={book.coverPath} />
           {!book.coverPath && book.title.charAt(0).toUpperCase()}
         </div>
-        <div style={{ padding: "8px 10px", textAlign: "left" }}>
+        <div style={{ padding: "10px 12px 12px", textAlign: "left" }}>
           <div
             style={{
               fontWeight: 600,
@@ -97,8 +98,8 @@ function BookCard({ book, color, onOpenBook, onRemoveBook }: {
           <div
             style={{
               fontSize: 12,
-              color: "var(--text)",
-              marginTop: 2,
+              color: "var(--text-secondary)",
+              marginTop: 3,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",
@@ -113,13 +114,13 @@ function BookCard({ book, color, onOpenBook, onRemoveBook }: {
         title="Remove from library"
         style={{
           position: "absolute",
-          top: 4,
-          right: 4,
-          width: 24,
-          height: 24,
+          top: 6,
+          right: 6,
+          width: 26,
+          height: 26,
           borderRadius: "50%",
           border: "none",
-          background: "rgba(0,0,0,0.5)",
+          background: "rgba(0,0,0,0.55)",
           color: "#fff",
           cursor: "pointer",
           display: "flex",
@@ -147,11 +148,14 @@ function Library({ books, onOpenBook, onRemoveBook }: LibraryProps) {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "var(--text)",
-          fontSize: 16,
+          flexDirection: "column",
+          gap: 12,
         }}
       >
-        <p>No books yet. Open an EPUB to add it to your library.</p>
+        <div style={{ fontSize: 48, opacity: 0.3 }}>📚</div>
+        <p style={{ color: "var(--text-secondary)", fontSize: 15, maxWidth: 300, lineHeight: 1.5 }}>
+          No books yet. Open an EPUB file to add it to your library.
+        </p>
       </div>
     );
   }
@@ -161,8 +165,8 @@ function Library({ books, onOpenBook, onRemoveBook }: LibraryProps) {
       <div
         style={{
           display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(160px, 1fr))",
-          gap: 16,
+          gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))",
+          gap: 20,
         }}
       >
         {books.map((book, i) => (

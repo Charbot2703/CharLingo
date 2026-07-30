@@ -7,20 +7,52 @@ type ToolbarProps = {
     onGoToFlashcards?: () => void;
 };
 
+const btnStyle: React.CSSProperties = {
+  background: "transparent",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius-sm)",
+  padding: "6px 14px",
+  fontSize: 13,
+  fontWeight: 500,
+  color: "var(--text)",
+  cursor: "pointer",
+  transition: "all 0.15s",
+};
+
 function Toolbar({ onOpenFile, onGoToLibrary, onGoToFlashcards }: ToolbarProps) {
     const [menuOpen, setMenuOpen] = useState(false);
     const gearRef = useRef<HTMLButtonElement>(null);
 
     return (
-        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "8px 12px" }}>
-            <h1 style={{ margin: 0, fontSize: 20 }}>CharLingo</h1>
-            <button onClick={onOpenFile}>
-                Open File
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            padding: "10px 16px",
+            borderBottom: "1px solid var(--border)",
+            background: "var(--surface)",
+            flexShrink: 0,
+          }}
+        >
+            <span
+              style={{
+                fontWeight: 700,
+                fontSize: 18,
+                color: "var(--accent)",
+                marginRight: 8,
+                letterSpacing: "-0.3px",
+              }}
+            >
+              CharLingo
+            </span>
+            <button onClick={onOpenFile} style={btnStyle}>
+              Open File
             </button>
-            <button onClick={onGoToLibrary} style={{ fontSize: 13 }}>
+            <button onClick={onGoToLibrary} style={btnStyle}>
               Library
             </button>
-            <button onClick={onGoToFlashcards} style={{ fontSize: 13 }}>
+            <button onClick={onGoToFlashcards} style={btnStyle}>
               Flashcards
             </button>
             <div style={{ flex: 1 }} />
@@ -28,13 +60,14 @@ function Toolbar({ onOpenFile, onGoToLibrary, onGoToFlashcards }: ToolbarProps) 
                 ref={gearRef}
                 onClick={() => setMenuOpen((o) => !o)}
                 style={{
-                    background: "none",
+                    background: "transparent",
                     border: "none",
                     cursor: "pointer",
                     fontSize: 20,
-                    color: "var(--text)",
+                    color: "var(--text-secondary)",
                     padding: "4px 8px",
-                    borderRadius: 4,
+                    borderRadius: "var(--radius-sm)",
+                    transition: "color 0.15s",
                 }}
             >
                 ⚙

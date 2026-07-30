@@ -39,13 +39,14 @@ function FlashcardReviewPopup({ flashcard, flashcardMode, onClose }: FlashcardRe
         alignItems: "center",
         justifyContent: "center",
         zIndex: 1000,
+        backdropFilter: "blur(2px)",
       }}
     >
       <div
         style={{
           position: "absolute",
           top: 0, left: 0, right: 0, bottom: 0,
-          background: "rgba(0,0,0,0.3)",
+          background: "var(--overlay)",
         }}
       />
       <div
@@ -54,16 +55,16 @@ function FlashcardReviewPopup({ flashcard, flashcardMode, onClose }: FlashcardRe
         style={{
           position: "relative",
           width: "max-content",
-          minWidth: 280,
+          minWidth: 300,
           maxWidth: 600,
           maxHeight: "80vh",
-          background: "#fff",
-          border: "1px solid #ddd",
-          borderRadius: 8,
-          boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-lg)",
+          boxShadow: "var(--shadow-lg)",
           display: "flex",
           flexDirection: "column",
-          overflowY: "auto",
+          overflow: "hidden",
           cursor: flashcardMode === "reveal" && !revealed ? "pointer" : "default",
         }}
       >
@@ -72,14 +73,14 @@ function FlashcardReviewPopup({ flashcard, flashcardMode, onClose }: FlashcardRe
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            padding: "8px 12px",
-            borderBottom: "1px solid #eee",
+            padding: "10px 14px",
+            borderBottom: "1px solid var(--border)",
           }}
         >
-          <span style={{ fontWeight: 600, fontSize: 12, color: "#888" }}>
+          <span style={{ fontWeight: 600, fontSize: 12, color: "var(--text-secondary)" }}>
             {flashcard.sourceTitle}
           </span>
-          <span style={{ fontSize: 11, color: "#aaa" }}>
+          <span style={{ fontSize: 11, color: "var(--text-secondary)" }}>
             {flashcard.correctCount}/{flashcard.attemptCount}
           </span>
           <button
@@ -89,7 +90,7 @@ function FlashcardReviewPopup({ flashcard, flashcardMode, onClose }: FlashcardRe
               border: "none",
               cursor: "pointer",
               fontSize: 16,
-              color: "#888",
+              color: "var(--text-secondary)",
               padding: 0,
               lineHeight: 1,
             }}
@@ -97,16 +98,17 @@ function FlashcardReviewPopup({ flashcard, flashcardMode, onClose }: FlashcardRe
             ✕
           </button>
         </div>
-        <div style={{ padding: "10px 12px", lineHeight: 1.4 }}>
+        <div style={{ padding: "14px 14px", lineHeight: 1.5, color: "var(--text-h)" }}>
           {flashcard.original}
         </div>
         {(showTranslation || flashcardMode !== "reveal") && (
           <div
             style={{
-              padding: "8px 12px",
-              borderTop: "1px solid #eee",
-              background: "#f9f9f9",
-              lineHeight: 1.4,
+              padding: "12px 14px",
+              borderTop: "1px solid var(--border)",
+              background: "var(--bg-secondary)",
+              lineHeight: 1.5,
+              color: "var(--text)",
             }}
           >
             {flashcard.translation}
@@ -116,10 +118,10 @@ function FlashcardReviewPopup({ flashcard, flashcardMode, onClose }: FlashcardRe
           <div
             style={{
               padding: "8px 12px",
-              borderTop: "1px solid #eee",
+              borderTop: "1px solid var(--border)",
               textAlign: "center",
               fontSize: 12,
-              color: "#aaa",
+              color: "var(--text-secondary)",
             }}
           >
             Tap to reveal translation

@@ -43,16 +43,16 @@ function TranslationPopup({
         transform: "translate(-50%, -50%)",
         zIndex: 1000,
         width: "max-content",
-        minWidth: 200,
+        minWidth: 260,
         maxWidth: viewerWidth ?? 600,
         maxHeight: "80vh",
-        background: "#fff",
-        border: "1px solid #ddd",
-        borderRadius: 8,
-        boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        borderRadius: "var(--radius-lg)",
+        boxShadow: "var(--shadow-lg)",
         display: "flex",
         flexDirection: "column",
-        overflowY: "auto",
+        overflow: "hidden",
         fontSize: fontSize + "%",
       }}
       ref={cardRef}
@@ -62,11 +62,11 @@ function TranslationPopup({
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          padding: "8px 12px",
-          borderBottom: "1px solid #eee",
+          padding: "10px 14px",
+          borderBottom: "1px solid var(--border)",
         }}
       >
-        <span style={{ fontWeight: 600, fontSize: 12, color: "#888" }}>
+        <span style={{ fontWeight: 600, fontSize: 11, color: "var(--text-secondary)", textTransform: "uppercase", letterSpacing: "0.5px" }}>
           Original
         </span>
         <button
@@ -76,7 +76,7 @@ function TranslationPopup({
             border: "none",
             cursor: "pointer",
             fontSize: 16,
-            color: "#888",
+            color: "var(--text-secondary)",
             padding: 0,
             lineHeight: 1,
           }}
@@ -86,48 +86,54 @@ function TranslationPopup({
       </div>
       <div
         style={{
-          padding: "10px 12px",
-          lineHeight: 1.4,
+          padding: "12px 14px",
+          lineHeight: 1.5,
+          color: "var(--text-h)",
         }}
       >
         {original}
       </div>
       <div
         style={{
-          padding: "8px 12px",
-          borderTop: "1px solid #eee",
-          background: "#f9f9f9",
-          minHeight: 32,
+          padding: "10px 14px",
+          borderTop: "1px solid var(--border)",
+          background: "var(--bg-secondary)",
+          minHeight: 36,
           display: "flex",
           alignItems: "center",
-          lineHeight: 1.4,
+          lineHeight: 1.5,
+          fontSize: "0.9em",
+          color: "var(--text)",
         }}
       >
         {translating ? (
-          <span style={{ color: "#999" }}>Translating…</span>
+          <span style={{ color: "var(--text-secondary)", fontSize: "0.9em" }}>Translating…</span>
         ) : translation ? (
           translation
         ) : (
-          <span style={{ color: "#ccc" }}>Translation</span>
+          <span style={{ color: "var(--border)" }}>Translation</span>
         )}
       </div>
       {onSaveFlashcard && translation && (
-        <button
-          onClick={() => onSaveFlashcard(original, translation)}
-          style={{
-            margin: "8px 12px",
-            padding: "6px 14px",
-            background: "#34d399",
-            color: "#fff",
-            border: "none",
-            borderRadius: 6,
-            cursor: "pointer",
-            fontSize: 13,
-            fontWeight: 600,
-          }}
-        >
-          + Save as Flashcard
-        </button>
+        <div style={{ padding: "8px 12px 12px" }}>
+          <button
+            onClick={() => onSaveFlashcard(original, translation)}
+            style={{
+              width: "100%",
+              padding: "8px 14px",
+              background: "var(--accent)",
+              color: "#fff",
+              border: "none",
+              borderRadius: "var(--radius-sm)",
+              cursor: "pointer",
+              fontSize: 13,
+              fontWeight: 600,
+              transition: "all 0.15s",
+            }}
+          >
+            + Save as Flashcard
+          </button>
+        </div>
       )}
     </div>
   );

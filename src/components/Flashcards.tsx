@@ -12,7 +12,7 @@ type FlashcardsProps = {
   onUpdateFlashcardStats?: (results: { id: string; correct: number; attempt: number }[]) => void;
 };
 
-const COLORS = ["#c084fc", "#60a5fa", "#f472b6", "#34d399", "#fbbf24", "#f87171"];
+const COLORS = ["#f97316", "#d97706", "#f43f5e", "#14b8a6", "#eab308", "#f87171"];
 
 function sortCards(cards: Flashcard[], sort: SortMode): Flashcard[] {
   const copy = [...cards];
@@ -57,11 +57,14 @@ function Flashcards({ flashcards, onRemoveFlashcard, onUpdateFlashcardStats }: F
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          color: "var(--text)",
-          fontSize: 16,
+          flexDirection: "column",
+          gap: 12,
         }}
       >
-        <p>No flashcards yet. Translate text and save it as a flashcard.</p>
+        <div style={{ fontSize: 48, opacity: 0.3 }}>🃏</div>
+        <p style={{ color: "var(--text-secondary)", fontSize: 15, maxWidth: 320, lineHeight: 1.5 }}>
+          No flashcards yet. Select text in a book and save it as a flashcard.
+        </p>
       </div>
     );
   }
@@ -81,6 +84,7 @@ function Flashcards({ flashcards, onRemoveFlashcard, onUpdateFlashcardStats }: F
             alignItems: "center",
             marginBottom: 16,
             gap: 8,
+            flexWrap: "wrap",
           }}
         >
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
@@ -89,13 +93,16 @@ function Flashcards({ flashcards, onRemoveFlashcard, onUpdateFlashcardStats }: F
                 key={m}
                 onClick={() => setSort(m)}
                 style={{
-                  padding: "4px 10px",
+                  padding: "5px 12px",
                   fontSize: 12,
+                  fontWeight: 500,
                   cursor: "pointer",
-                  background: sort === m ? "#c084fc" : "transparent",
-                  color: sort === m ? "#fff" : "var(--text)",
-                  border: "1px solid var(--border, #ddd)",
-                  borderRadius: 4,
+                  background: sort === m ? "var(--accent)" : "transparent",
+                  color: sort === m ? "#fff" : "var(--text-secondary)",
+                  border: "1px solid",
+                  borderColor: sort === m ? "var(--accent)" : "var(--border)",
+                  borderRadius: "var(--radius-sm)",
+                  transition: "all 0.15s",
                 }}
               >
                 {m === "newest" ? "Newest" : m === "alphabetical" ? "A–Z" : "Needs Practice"}
@@ -106,17 +113,18 @@ function Flashcards({ flashcards, onRemoveFlashcard, onUpdateFlashcardStats }: F
             onClick={() => setQuizActive(true)}
             style={{
               padding: "8px 20px",
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: 600,
               cursor: "pointer",
-              background: "#f472b6",
+              background: "var(--accent)",
               color: "#fff",
               border: "none",
-              borderRadius: 6,
+              borderRadius: "var(--radius-sm)",
               whiteSpace: "nowrap",
+              transition: "all 0.15s",
             }}
           >
-            Review
+            Start Quiz
           </button>
         </div>
         <div
@@ -151,6 +159,7 @@ function FlashcardCard({
 }: {
   card: Flashcard;
   color: string;
+  fontSize: number;
   onClick: () => void;
   onRemove: () => void;
 }) {
@@ -160,13 +169,14 @@ function FlashcardCard({
     <div
       style={{
         position: "relative",
-        borderRadius: 8,
+        borderRadius: "var(--radius)",
         overflow: "hidden",
         border: "1px solid var(--border)",
-        background: "var(--bg)",
+        background: "var(--surface)",
         cursor: "pointer",
-        boxShadow: hover ? "0 4px 12px rgba(0,0,0,0.15)" : "none",
-        transition: "box-shadow 0.2s",
+        boxShadow: hover ? "var(--shadow-md)" : "var(--shadow-sm)",
+        transform: hover ? "translateY(-2px)" : "none",
+        transition: "all 0.2s",
       }}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
@@ -175,7 +185,7 @@ function FlashcardCard({
       <div
         style={{
           height: 120,
-          background: color,
+          background: `linear-gradient(135deg, ${color}, ${color}dd)`,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -193,11 +203,11 @@ function FlashcardCard({
       {card.attemptCount > 0 && (
         <div
           style={{
-            padding: "4px 10px",
+            padding: "5px 10px",
             fontSize: 11 * fontSize / 100,
-            color: "var(--text)",
+            color: "var(--text-secondary)",
             textAlign: "right",
-            borderTop: "1px solid var(--border, #eee)",
+            borderTop: "1px solid var(--border)",
           }}
         >
           {card.correctCount}/{card.attemptCount}
@@ -208,13 +218,13 @@ function FlashcardCard({
         title="Remove flashcard"
         style={{
           position: "absolute",
-          top: 4,
-          right: 4,
-          width: 24,
-          height: 24,
+          top: 6,
+          right: 6,
+          width: 26,
+          height: 26,
           borderRadius: "50%",
           border: "none",
-          background: "rgba(0,0,0,0.5)",
+          background: "rgba(0,0,0,0.55)",
           color: "#fff",
           cursor: "pointer",
           display: "flex",

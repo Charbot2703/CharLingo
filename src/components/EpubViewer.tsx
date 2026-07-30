@@ -11,16 +11,69 @@ export type EpubViewerHandle = {
 type EpubViewerProps = {
   filePath: string | null;
   fontSize?: number;
+  darkMode?: boolean;
+  initialLocation?: string;
+  onLocationChange?: (cfi: string) => void;
   onTextSelected?: (text: string, x: number, y: number, viewerWidth?: number) => void;
 };
 
+const STYLE_ID = "charlingo-viewer-styles";
+
+function applyDarkMode(rendition: any, dark: boolean) {
+  injectViewerStyles(rendition, dark);
+}
+
+const VIEWER_CSS_LIGHT = `body { padding-bottom: 48px !important; }`;
+const VIEWER_CSS_DARK = `body {
+  color: #e2e8f0 !important;
+  background: #0b0d14 !important;
+  padding-bottom: 48px !important;
+}
+a, a:link, a:visited {
+  color: #fb923c !important;
+}`;
+
+function injectViewerStyles(rendition: any, dark: boolean) {
+  try {
+    const contents = rendition.getContents();
+    if (!contents || !contents.length) return;
+    contents.forEach((content: any) => {
+      const doc = content.document;
+      if (!doc || !doc.head) return;
+      let el = doc.getElementById(STYLE_ID);
+      if (!el) {
+        el = doc.createElement("style");
+        el.id = STYLE_ID;
+        doc.head.appendChild(el);
+      }
+      el.textContent = dark ? VIEWER_CSS_DARK : VIEWER_CSS_LIGHT;
+    });
+  } catch {
+    // silently ignore if iframe isn't ready
+  }
+}
+
+const navBtnStyle: React.CSSProperties = {
+  background: "transparent",
+  border: "1px solid var(--border)",
+  borderRadius: "var(--radius-sm)",
+  padding: "5px 14px",
+  fontSize: 13,
+  fontWeight: 500,
+  color: "var(--text)",
+  cursor: "pointer",
+  transition: "all 0.15s",
+};
+
 const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
-  ({ filePath, fontSize, onTextSelected }, ref) => {
+  ({ filePath, fontSize, darkMode, initialLocation, onLocationChange, onTextSelected }, ref) => {
   const viewerRef = useRef<HTMLDivElement>(null);
   const bookRef = useRef<Awaited<ReturnType<typeof ePub>> | null>(null);
   const renditionRef = useRef<any>(null);
   const lastCfiRef = useRef<string | null>(null);
   const [location, setLocation] = useState<any>(null);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
 
   useImperativeHandle(ref, () => ({
     clearHighlight: () => {
@@ -32,17 +85,56 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
   }));
 
   const loadedPathRef = useRef<string | null>(null);
+  const darkModeRef = useRef(darkMode);
+  darkModeRef.current = darkMode;
+  const onLocationChangeRef = useRef(onLocationChange);
+  onLocationChangeRef.current = onLocationChange;
+
+  const [containerHeight, setContainerHeight] = useState<number>(0);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
 
   useEffect(() => {
-    // Going to library — keep book alive in hidden DOM
-    if (!filePath) return;
+    if (!viewerRef.current) return;
 
-    // Same book being re-shown after going to library — already loaded
+    // Check immediately on mount
+    const initialHeight = viewerRef.current.clientHeight;
+    if (initialHeight > 0) {
+      setContainerHeight(initialHeight);
+      setContainerWidth(viewerRef.current.clientWidth);
+      return;
+    }
+
+    // If it's 0, use a double-check loop (AnimationFrame) until it is ready
+    let animationFrameId: number;
+    const checkHeight = () => {
+      if (viewerRef.current) {
+        const height = viewerRef.current.clientHeight;
+        const width = viewerRef.current.clientWidth;
+        console.log(`Checking height ${height}`)
+        
+        if (height > 0) {
+          console.log(`Height found! ${height}px`)
+          setContainerHeight(height);
+          setContainerWidth(width);
+        } else {
+          // Keep checking next frame if still 0
+          animationFrameId = requestAnimationFrame(checkHeight);
+        }
+      }
+    };
+
+    animationFrameId = requestAnimationFrame(checkHeight);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, []);
+
+  useEffect(() => {
+    if (!filePath) return;
     if (filePath === loadedPathRef.current) return;
 
-    // Opening a different book — destroy the old one deferred to avoid
-    // re-entering React's rendering cycle (rendition.destroy triggers
-    // events that cause state updates and infinite re-render loops)
+    if (containerHeight === 0) return;
+    console.log(`Initialization safe! Width: ${containerWidth}px, Height: ${containerHeight}px`)
+
+
     if (bookRef.current) {
       const oldRendition = renditionRef.current;
       const oldBook = bookRef.current;
@@ -53,6 +145,7 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
         oldBook?.destroy?.();
       }, 0);
     }
+
 
     loadedPathRef.current = filePath;
 
@@ -73,10 +166,38 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
 
       bookRef.current = book;
       const rendition = book.renderTo(viewerRef.current!, {
-        width: '100%',
-        height: '100%',
+        flow: 'paginated', // Change to 'scrolled' if you want vertical scrolling
+        manager: 'default', // Use 'continuous' if flow is 'scrolled'
+        spread: 'none',
+        width: containerWidth,
+        height: containerHeight,
       });
-      rendition.on("relocated", (loc: any) => setLocation(loc));
+
+      rendition.hooks.content.register((contents: any) => {
+        contents.addStylesheetRules({
+          body: {
+            'padding': '0 40px !important', // Safe padding so text doesn't touch Tauri borders
+            "column-count": "1 !important",    // Restricts layout to a single text column
+            "column-width": "auto !important", // Spans the column to the container edges
+            'box-sizing': 'border-box !important',
+            'word-break': 'break-word !important',
+          },
+          'img, table, svg': {
+            'max-width': '100% !important', // Stops large elements from blowing out container
+            'height': 'auto !important',
+          },
+        });
+      });
+
+      rendition.on("relocated", (loc: any) => {
+        setLocation(loc);
+        if (loc?.start?.cfi) {
+          onLocationChangeRef.current?.(loc.start.cfi);
+        }
+        if (darkModeRef.current && renditionRef.current) {
+          applyDarkMode(renditionRef.current, true);
+        }
+      });
       rendition.on("keydown", (e: KeyboardEvent) => {
         if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
           e.preventDefault();
@@ -84,6 +205,22 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
         if (e.key === "ArrowLeft") rendition.prev();
         else if (e.key === "ArrowRight") rendition.next();
       });
+      rendition.on("touchstart", (e: TouchEvent) => {
+        touchStartX.current = e.changedTouches[0].screenX;
+        touchStartY.current = e.changedTouches[0].screenY;
+      });
+
+      rendition.on("touchend", (e: TouchEvent) => {
+        window.dispatchEvent(new CustomEvent("viewer-interaction"));
+        const deltaX = e.changedTouches[0].screenX - touchStartX.current;
+        const deltaY = e.changedTouches[0].screenY - touchStartY.current;
+        const threshold = 40;
+        if (Math.abs(deltaX) > threshold && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+          if (deltaX < 0) rendition.next();
+          else rendition.prev();
+        }
+      });
+
       rendition.on("mouseup", (_e: MouseEvent, contents: any) => {
         window.dispatchEvent(new CustomEvent("viewer-interaction"));
         const selection = contents.window.getSelection();
@@ -113,18 +250,39 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
         onTextSelected?.(text, rect.x, rect.y, viewerWidth);
       });
       renditionRef.current = rendition;
-      await rendition.display();
+      await rendition.display(initialLocation || undefined);
       rendition.themes.fontSize((fontSize ?? 100) + "%");
+      if (darkModeRef.current) {
+        applyDarkMode(rendition, true);
+      }
     }
+
+       // 5. Handle Tauri window resizing seamlessly
+      const handleResize = () => {
+        if (viewerRef.current && renditionRef.current) {
+        console.log(`RESIZING ${viewerRef.current.clientHeight}`)
+        const height = viewerRef.current.clientHeight;
+        const width = viewerRef.current.clientWidth;
+        console.log(`Checking height ${height}`)
+        
+        if (height > 0) {
+          console.log(`Height found! ${height}px`)
+          setContainerHeight(height);
+          setContainerWidth(width);
+        }
+          renditionRef.current.resize(containerWidth, containerHeight)
+        }
+      };
+
+      window.addEventListener('resize', handleResize);
 
     loadBook();
 
     return () => {
       cancelled = true;
     };
-  }, [filePath]);
+  }, [filePath, containerHeight, containerWidth]);
 
-  // Destroy book/rendition only on actual component unmount (app shutdown)
   useEffect(() => {
     return () => {
       renditionRef.current?.destroy?.();
@@ -154,6 +312,11 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
     renditionRef.current.themes.fontSize(fontSize + "%");
   }, [fontSize]);
 
+  useEffect(() => {
+    if (!renditionRef.current) return;
+    applyDarkMode(renditionRef.current, !!darkMode);
+  }, [darkMode]);
+
   const handlePrev = useCallback(() => {
     renditionRef.current?.prev();
   }, []);
@@ -163,30 +326,54 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
   }, []);
 
   return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+    <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
       <div
         ref={viewerRef}
-        style={{ flex: 1 }}
+        style={{
+          width: '100%',
+          height: '100%',
+          position: 'relative'
+        //  overflow: 'hidden'
+        }}
+        //style={{ flex: 1, position: "relative",  maxHeight: "75svh" }}
       />
       {filePath && (
         <div
           style={{
             display: "flex",
             justifyContent: "center",
-            gap: "1rem",
-            padding: "0.5rem",
+            gap: 12,
+            padding: "8px 16px",
             alignItems: "center",
+            borderTop: "1px solid var(--border)",
+            background: "var(--surface)",
           }}
         >
-          <button onClick={handlePrev} disabled={location?.atStart}>
+          <button
+            onClick={handlePrev}
+            disabled={location?.atStart}
+            style={navBtnStyle}
+          >
             ← Prev
           </button>
-          <span>
+          <span
+            style={{
+              fontSize: 12,
+              color: "var(--text-secondary)",
+              fontWeight: 500,
+              minWidth: 80,
+              textAlign: "center",
+            }}
+          >
             {location
               ? `${location.start.displayed.page} / ${location.start.displayed.total}`
               : ""}
           </span>
-          <button onClick={handleNext} disabled={location?.atEnd}>
+          <button
+            onClick={handleNext}
+            disabled={location?.atEnd}
+            style={navBtnStyle}
+          >
             Next →
           </button>
         </div>
