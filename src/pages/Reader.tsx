@@ -215,14 +215,10 @@ function Reader() {
             />
             <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", minHeight: 0 }}>
               <div style={{
-                          flex: 1, 
-                          display: "flex", // Keep this always flex so sizes are tracked
+                          flex: view === "reader" ? 1 : undefined,
+                          display: view === "reader" ? "flex" : "none",
                           flexDirection: "column", 
                           minHeight: 0, 
-                          // If it's not the reader view, hide it visually but keep its layout intact
-                          visibility: view === "reader" ? "visible" : "hidden",
-                          pointerEvents: view === "reader" ? "auto" : "none",
-                          zIndex: view === "reader" ? 1 : -1
                           }}>
                 <EpubViewer
                   ref={viewerRef}
