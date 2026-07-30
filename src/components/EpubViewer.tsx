@@ -260,12 +260,36 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
           return;
         }
 
-        // No swipe — block synthesized mouseup and wait for ActionMode dismissal
+        // No swipe — check for text selection and trigger popup immediately
+        const contents = contentsRef.current;
+        if (contents) {
+          const selection = contents.window.getSelection();
+          const text = selection?.toString().trim();
+          if (text && !selection?.isCollapsed) {
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              const iframe = viewerRef.current?.querySelector("iframe");
+              if (iframe) {
+                const iframeRect = iframe.getBoundingClientRect();
+                rect.x += iframeRect.left;
+                rect.y += iframeRect.top;
+              }
+              const cfirange = contents.cfiFromRange(range);
+              if (lastCfiRef.current) {
+                renditionRef.current?.annotations?.remove(lastCfiRef.current, "highlight");
+              }
+              lastCfiRef.current = cfirange;
+              renditionRef.current?.annotations?.highlight(cfirange, {});
+              const viewerWidth = viewerRef.current?.clientWidth ?? 0;
+              onTextSelectedRef.current?.(text, rect.x, rect.y, viewerWidth);
+              touchSelectionActiveRef.current = false;
+              selection.removeAllRanges();
+            }
+          }
+        }
+
         touchHandledPopup.current = true;
-        setTimeout(() => {
-          touchHandledPopup.current = false;
-          touchSelectionActiveRef.current = false;
-        }, 5000);
       });
 
       rendition.on("mouseup", (_e: MouseEvent, contents: any) => {
