@@ -90,49 +90,38 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
   const onLocationChangeRef = useRef(onLocationChange);
   onLocationChangeRef.current = onLocationChange;
 
-  const [containerHeight, setContainerHeight] = useState<number>(0);
-  const [containerWidth, setContainerWidth] = useState<number>(0);
+  const [initialized, setInitialized] = useState(false);
+  const containerSizeRef = useRef({ width: 0, height: 0 });
 
   useEffect(() => {
-    if (!viewerRef.current) return;
+    const el = viewerRef.current;
+    if (!el) return;
 
-    // Check immediately on mount
-    const initialHeight = viewerRef.current.clientHeight;
-    if (initialHeight > 0) {
-      setContainerHeight(initialHeight);
-      setContainerWidth(viewerRef.current.clientWidth);
-      return;
-    }
+    let cancelled = false;
 
-    // If it's 0, use a double-check loop (AnimationFrame) until it is ready
-    let animationFrameId: number;
-    const checkHeight = () => {
-      if (viewerRef.current) {
-        const height = viewerRef.current.clientHeight;
-        const width = viewerRef.current.clientWidth;
-        console.log(`Checking height ${height}`)
-        
-        if (height > 0) {
-          console.log(`Height found! ${height}px`)
-          setContainerHeight(height);
-          setContainerWidth(width);
-        } else {
-          // Keep checking next frame if still 0
-          animationFrameId = requestAnimationFrame(checkHeight);
-        }
+    const obs = new ResizeObserver(([entry]) => {
+      if (cancelled) return;
+      const { width, height } = entry.contentRect;
+      containerSizeRef.current = { width, height };
+
+      if (renditionRef.current) {
+        renditionRef.current.resize(width, height);
+      } else {
+        setInitialized(true);
       }
-    };
+    });
 
-    animationFrameId = requestAnimationFrame(checkHeight);
-    return () => cancelAnimationFrame(animationFrameId);
+    obs.observe(el);
+    return () => {
+      cancelled = true;
+      obs.disconnect();
+    };
   }, []);
 
   useEffect(() => {
     if (!filePath) return;
+    if (!initialized) return;
     if (filePath === loadedPathRef.current) return;
-
-    if (containerHeight === 0) return;
-    console.log(`Initialization safe! Width: ${containerWidth}px, Height: ${containerHeight}px`)
 
 
     if (bookRef.current) {
@@ -165,20 +154,19 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
       if (cancelled) { book.destroy?.(); return; }
 
       bookRef.current = book;
+      const size = containerSizeRef.current;
       const rendition = book.renderTo(viewerRef.current!, {
-        flow: 'paginated', // Change to 'scrolled' if you want vertical scrolling
-        manager: 'default', // Use 'continuous' if flow is 'scrolled'
+        flow: 'paginated',
+        manager: 'default',
         spread: 'none',
-        width: containerWidth,
-        height: containerHeight,
+        width: size.width,
+        height: size.height,
       });
 
       rendition.hooks.content.register((contents: any) => {
         contents.addStylesheetRules({
           body: {
             'padding': '0 40px !important', // Safe padding so text doesn't touch Tauri borders
-            "column-count": "1 !important",    // Restricts layout to a single text column
-            "column-width": "auto !important", // Spans the column to the container edges
             'box-sizing': 'border-box !important',
             'word-break': 'break-word !important',
           },
@@ -257,31 +245,12 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
       }
     }
 
-       // 5. Handle Tauri window resizing seamlessly
-      const handleResize = () => {
-        if (viewerRef.current && renditionRef.current) {
-        console.log(`RESIZING ${viewerRef.current.clientHeight}`)
-        const height = viewerRef.current.clientHeight;
-        const width = viewerRef.current.clientWidth;
-        console.log(`Checking height ${height}`)
-        
-        if (height > 0) {
-          console.log(`Height found! ${height}px`)
-          setContainerHeight(height);
-          setContainerWidth(width);
-        }
-          renditionRef.current.resize(containerWidth, containerHeight)
-        }
-      };
-
-      window.addEventListener('resize', handleResize);
-
     loadBook();
 
     return () => {
       cancelled = true;
     };
-  }, [filePath, containerHeight, containerWidth]);
+  }, [filePath, initialized]);
 
   useEffect(() => {
     return () => {
@@ -330,12 +299,10 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
       <div
         ref={viewerRef}
         style={{
-          width: '100%',
-          height: '100%',
-          position: 'relative'
-        //  overflow: 'hidden'
+          flex: 1,
+          position: "relative",
+          minHeight: 0,
         }}
-        //style={{ flex: 1, position: "relative",  maxHeight: "75svh" }}
       />
       {filePath && (
         <div
