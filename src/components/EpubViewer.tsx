@@ -74,6 +74,10 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
   const [location, setLocation] = useState<any>(null);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
+  const touchStartTime = useRef(0);
+  const [resizeCounter, setResizeCounter] = useState(0);
+  const currentCfiRef = useRef<string | null>(null);
+  const selectionHandledRef = useRef(false);
 
   useImperativeHandle(ref, () => ({
     clearHighlight: () => {
@@ -105,7 +109,7 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
       containerSizeRef.current = { width, height };
 
       if (renditionRef.current) {
-        renditionRef.current.resize(width, height);
+        setResizeCounter(c => c + 1);
       } else {
         setInitialized(true);
       }
@@ -121,9 +125,6 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
   useEffect(() => {
     if (!filePath) return;
     if (!initialized) return;
-    if (filePath === loadedPathRef.current) return;
-
-
     if (bookRef.current) {
       const oldRendition = renditionRef.current;
       const oldBook = bookRef.current;
@@ -166,19 +167,57 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
       rendition.hooks.content.register((contents: any) => {
         contents.addStylesheetRules({
           body: {
-            'padding': '0 40px !important', // Safe padding so text doesn't touch Tauri borders
+            'padding': '0 40px !important',
             'box-sizing': 'border-box !important',
             'word-break': 'break-word !important',
           },
           'img, table, svg': {
-            'max-width': '100% !important', // Stops large elements from blowing out container
+            'max-width': '100% !important',
             'height': 'auto !important',
           },
+        });
+
+        let selTimer: ReturnType<typeof setTimeout>;
+        const doc = contents.document;
+        doc.addEventListener("selectionchange", () => {
+          clearTimeout(selTimer);
+          selTimer = setTimeout(() => {
+            if (selectionHandledRef.current) return;
+
+            const selection = contents.window.getSelection();
+            const text = selection?.toString().trim();
+            if (!text || selection?.isCollapsed) return;
+
+            const range = selection.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            if (rect.width === 0 || rect.height === 0) return;
+
+            const iframe = viewerRef.current?.querySelector("iframe");
+            if (iframe) {
+              const iframeRect = iframe.getBoundingClientRect();
+              rect.x += iframeRect.left;
+              rect.y += iframeRect.top;
+            }
+
+            if (lastCfiRef.current) {
+              rendition.annotations.remove(lastCfiRef.current, "highlight");
+            }
+            const cfirange = contents.cfiFromRange(range);
+            lastCfiRef.current = cfirange;
+            rendition.annotations.highlight(cfirange, {});
+
+            selectionHandledRef.current = true;
+            setTimeout(() => { selectionHandledRef.current = false; }, 200);
+
+            const viewerWidth = viewerRef.current?.clientWidth ?? 0;
+            onTextSelected?.(text, rect.x, rect.y, viewerWidth);
+          }, 200);
         });
       });
 
       rendition.on("relocated", (loc: any) => {
         setLocation(loc);
+        currentCfiRef.current = loc?.start?.cfi || null;
         if (loc?.start?.cfi) {
           onLocationChangeRef.current?.(loc.start.cfi);
         }
@@ -196,6 +235,7 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
       rendition.on("touchstart", (e: TouchEvent) => {
         touchStartX.current = e.changedTouches[0].screenX;
         touchStartY.current = e.changedTouches[0].screenY;
+        touchStartTime.current = Date.now();
       });
 
       rendition.on("touchend", (e: TouchEvent) => {
@@ -203,13 +243,15 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
         const deltaX = e.changedTouches[0].screenX - touchStartX.current;
         const deltaY = e.changedTouches[0].screenY - touchStartY.current;
         const threshold = 40;
-        if (Math.abs(deltaX) > threshold && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+        const elapsed = Date.now() - touchStartTime.current;
+        if (elapsed < 300 && Math.abs(deltaX) > threshold && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
           if (deltaX < 0) rendition.next();
           else rendition.prev();
         }
       });
 
       rendition.on("mouseup", (_e: MouseEvent, contents: any) => {
+        if (selectionHandledRef.current) return;
         window.dispatchEvent(new CustomEvent("viewer-interaction"));
         const selection = contents.window.getSelection();
         const text = selection?.toString().trim();
@@ -238,7 +280,7 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
         onTextSelected?.(text, rect.x, rect.y, viewerWidth);
       });
       renditionRef.current = rendition;
-      await rendition.display(initialLocation || undefined);
+      await rendition.display(currentCfiRef.current || initialLocation || undefined);
       rendition.themes.fontSize((fontSize ?? 100) + "%");
       if (darkModeRef.current) {
         applyDarkMode(rendition, true);
@@ -250,7 +292,7 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
     return () => {
       cancelled = true;
     };
-  }, [filePath, initialized]);
+  }, [filePath, initialized, resizeCounter]);
 
   useEffect(() => {
     return () => {
