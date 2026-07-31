@@ -35,17 +35,14 @@ function Toolbar({ onOpenFile, onGoToLibrary, onGoToFlashcards }: ToolbarProps) 
             flexShrink: 0,
           }}
         >
-            <span
+            <img
+              src="/favicon.svg"
+              alt="CharLingo"
               style={{
-                fontWeight: 700,
-                fontSize: 18,
-                color: "var(--accent)",
+                height: 32,
                 marginRight: 8,
-                letterSpacing: "-0.3px",
               }}
-            >
-              CharLingo
-            </span>
+            />
             <button onClick={onOpenFile} style={btnStyle}>
               Open File
             </button>
