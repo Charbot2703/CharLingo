@@ -66,6 +66,8 @@ jobs:
 
   android:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
@@ -135,5 +137,9 @@ jobs:
           args: --apk --aab
           uploadWorkflowArtifacts: true
           workflowArtifactNamePattern: "charlingo-android-[bundle]"
+          tagName: app-v__VERSION__
+          releaseName: "CharLingo v__VERSION__"
+          releaseBody: "See the assets below to download and install this version."
+          releaseDraft: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
