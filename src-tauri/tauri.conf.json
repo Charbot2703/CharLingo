@@ -1,6 +1,7 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "CharLingo",
+  "mainBinaryName": "CharLingo",
   "version": "0.1.0",
   "identifier": "charbot.dev",
   "build": {
@@ -16,7 +17,8 @@
         "width": 800,
         "height": 600,
         "resizable": true,
-        "fullscreen": false
+        "fullscreen": false,
+        "devtools": true
       }
     ],
     "security": {

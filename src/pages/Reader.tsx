@@ -82,14 +82,21 @@ function Reader() {
     const { translate, translating } = useTranslation();
 
     async function openFile() {
-        const file = await open({
-            filters: [
-                {
-                    name: "EPUB",
-                    extensions: ["epub"]
-                }
-            ]
-        });
+        let file: string | null;
+        try {
+            file = await open({
+                filters: [
+                    {
+                        name: "EPUB",
+                        extensions: ["epub"]
+                    }
+                ]
+            });
+        } catch (err) {
+            console.error("File dialog failed:", err);
+            window.alert("Failed to open file dialog: " + String(err));
+            return;
+        }
 
         if (typeof file !== "string") return;
 
