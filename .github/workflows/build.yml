@@ -52,7 +52,7 @@ jobs:
           workspaces: src-tauri
 
       - name: Build the app
-        uses: tauri-apps/tauri-action@v2
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_IDENTITY: ${{ matrix.os == 'macos-latest' && '-' || '' }}
@@ -80,15 +80,19 @@ jobs:
           sdkmanager --install "ndk;27.0.12077973"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973" >> $GITHUB_ENV
 
-      - name: Generate signing keystore
+      - name: Restore signing keystore from secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
-          keytool -genkey -v \
-            -keystore src-tauri/gen/android/charlingo-keystore.jks \
-            -alias charlingo \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass charlingo_dev_2026 \
-            -keypass charlingo_dev_2026 \
-            -dname "CN=CharLingo, OU=Development, O=charbot.dev, L=Unknown, ST=Unknown, C=US"
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 --decode > src-tauri/gen/android/charlingo-keystore.jks
+          cat > src-tauri/gen/android/keystore.properties <<EOF
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyPassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          storeFile=charlingo-keystore.jks
+          EOF
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -118,16 +122,11 @@ jobs:
           key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
       - name: Build Android APK & AAB
-        run: npx tauri android build --apk --aab
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: tauri-apps/tauri-action@v1
         with:
-          name: charlingo-android-apk
-          path: src-tauri/gen/android/app/build/outputs/apk/release/*.apk
-
-      - name: Upload AAB
-        uses: actions/upload-artifact@v4
-        with:
-          name: charlingo-android-aab
-          path: src-tauri/gen/android/app/build/outputs/bundle/release/*.aab
+          mobile: android
+          args: --apk --aab
+          uploadWorkflowArtifacts: true
+          workflowArtifactNamePattern: "charlingo-android-[bundle]"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
