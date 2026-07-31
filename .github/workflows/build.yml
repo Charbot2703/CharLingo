@@ -13,6 +13,8 @@ concurrency:
 
 jobs:
   desktop:
+    permissions:
+      contents: write
     strategy:
       fail-fast: false
       matrix:
@@ -56,6 +58,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_IDENTITY: ${{ matrix.os == 'macos-latest' && '-' || '' }}
+        with:
+          tagName: app-v__VERSION__
+          releaseName: "CharLingo v__VERSION__"
+          releaseBody: "See the assets below to download and install this version."
+          releaseDraft: true
 
   android:
     runs-on: ubuntu-latest
