@@ -1,9 +1,14 @@
 import { useState, useCallback } from "react";
 import { LatencyOptimisedTranslator } from "@mkljczk/bergamot-translator/translator.js";
 
+const workerUrl = new URL(
+  `${import.meta.env.BASE_URL}worker/translator-worker.js`,
+  document.baseURI,
+).href;
+
 const translator = new LatencyOptimisedTranslator(
   { from: "es", to: "en" },
-  { workerUrl: `${import.meta.env.BASE_URL}worker/translator-worker.js` },
+  { workerUrl },
 );
 
 export function useTranslation() {
