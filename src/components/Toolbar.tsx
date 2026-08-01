@@ -19,6 +19,8 @@ const btnStyle: React.CSSProperties = {
   color: "var(--text)",
   cursor: "pointer",
   transition: "all 0.15s",
+  flexShrink: 0,
+  whiteSpace: "nowrap",
 };
 
 function Toolbar({ onOpenFile, onGoToLibrary, onGoToFlashcards, onExport, onImport }: ToolbarProps) {
@@ -29,7 +31,7 @@ function Toolbar({ onOpenFile, onGoToLibrary, onGoToFlashcards, onExport, onImpo
         <div
           style={{
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-start",
             gap: 8,
             padding: "10px 16px",
             borderBottom: "1px solid var(--border)",
@@ -38,33 +40,44 @@ function Toolbar({ onOpenFile, onGoToLibrary, onGoToFlashcards, onExport, onImpo
           }}
         >
             <img
-              src="/favicon.svg"
+              src={`${import.meta.env.BASE_URL}favicon.svg`}
               alt="CharLingo"
               style={{
                 height: 32,
                 marginRight: 8,
+                flexShrink: 0,
               }}
             />
-            <button onClick={onOpenFile} style={btnStyle}>
-              Open File
-            </button>
-            <button onClick={onGoToLibrary} style={btnStyle}>
-              Library
-            </button>
-            <button onClick={onGoToFlashcards} style={btnStyle}>
-              Flashcards
-            </button>
-            {onExport && (
-              <button onClick={onExport} style={btnStyle}>
-                Export
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                flexWrap: "wrap",
+                gap: 8,
+                flex: 1,
+                minWidth: 0,
+              }}
+            >
+              <button onClick={onOpenFile} style={btnStyle}>
+                Open File
               </button>
-            )}
-            {onImport && (
-              <button onClick={onImport} style={btnStyle}>
-                Import
+              <button onClick={onGoToLibrary} style={btnStyle}>
+                Library
               </button>
-            )}
-            <div style={{ flex: 1 }} />
+              <button onClick={onGoToFlashcards} style={btnStyle}>
+                Flashcards
+              </button>
+              {onExport && (
+                <button onClick={onExport} style={btnStyle}>
+                  Export
+                </button>
+              )}
+              {onImport && (
+                <button onClick={onImport} style={btnStyle}>
+                  Import
+                </button>
+              )}
+            </div>
             <button
                 ref={gearRef}
                 onClick={() => setMenuOpen((o) => !o)}
@@ -77,6 +90,7 @@ function Toolbar({ onOpenFile, onGoToLibrary, onGoToFlashcards, onExport, onImpo
                     padding: "4px 8px",
                     borderRadius: "var(--radius-sm)",
                     transition: "color 0.15s",
+                    flexShrink: 0,
                 }}
             >
                 ⚙

@@ -31,7 +31,6 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
   const [correctCount, setCorrectCount] = useState(0);
   const [attemptCount, setAttemptCount] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const retriesRef = useRef(new Map<string, number>());
   const cardResultsRef = useRef(new Map<string, { correct: number; attempt: number }>());
 
@@ -68,16 +67,6 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
     setStatus("prompt");
   }, []);
 
-  useEffect(() => {
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, []);
-
-  useEffect(() => {
-    if (status !== "correct") return;
-    timerRef.current = setTimeout(advance, 5000);
-    return () => { if (timerRef.current) clearTimeout(timerRef.current); };
-  }, [status, advance]);
-
   const handleSubmit = () => {
     if (status !== "prompt") return;
     const normalizedInput = normalize(input);
@@ -104,6 +93,8 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
     if (e.key === "Enter" && status === "prompt") {
       handleSubmit();
     } else if (e.key === "Enter" && status === "incorrect") {
+      handleNext();
+    } else if (e.key === "Enter" && status === "correct") {
       handleNext();
     }
   };
@@ -337,15 +328,34 @@ function FlashcardQuiz({ cards, fontSize, onExit, onComplete }: FlashcardQuizPro
         {status === "correct" && (
           <div
             style={{
-              fontSize: 15 * fontSize / 100,
-              fontWeight: 600,
-              color: "#10b981",
-              padding: "10px 24px",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 12,
+              padding: "14px 24px",
               background: "rgba(16, 185, 129, 0.1)",
-              borderRadius: "var(--radius-sm)",
+              borderRadius: "var(--radius)",
+              maxWidth: 500,
             }}
           >
-            ✓ Correct! Next card in 5s…
+            <div style={{ fontSize: 15 * fontSize / 100, fontWeight: 600, color: "#10b981" }}>
+              ✓ Correct!
+            </div>
+            <button
+              onClick={handleNext}
+              style={{
+                padding: "8px 24px",
+                fontSize: 14 * fontSize / 100,
+                fontWeight: 600,
+                cursor: "pointer",
+                background: "var(--accent)",
+                color: "#fff",
+                border: "none",
+                borderRadius: "var(--radius-sm)",
+              }}
+            >
+              Continue
+            </button>
           </div>
         )}
 
