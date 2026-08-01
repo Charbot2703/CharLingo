@@ -35,7 +35,8 @@ async function extractCover(book: any, id: string): Promise<string | undefined> 
     const buf = await blob.arrayBuffer();
     await writeFile(name, new Uint8Array(buf), { baseDir: BaseDirectory.AppData });
     return name;
-  } catch {
+  } catch (err) {
+    window.alert("Failed to save cover image: " + String(err));
     return;
   }
 }
@@ -128,7 +129,12 @@ function Reader() {
         // Copy to app data so it's readable in future sessions
         const id = crypto.randomUUID();
         const storageName = `${id}.epub`;
-        await writeFile(storageName, bytes, { baseDir: BaseDirectory.AppData });
+        try {
+          await writeFile(storageName, bytes, { baseDir: BaseDirectory.AppData });
+        } catch (err) {
+          window.alert("Failed to save book to library: " + String(err));
+          return;
+        }
 
         const storedCoverPath = book ? await extractCover(book, id) : undefined;
 
@@ -149,7 +155,8 @@ function Reader() {
           const storageName = `${id}.epub`;
           await writeFile(storageName, bytes, { baseDir: BaseDirectory.AppData });
           path = storageName;
-        } catch {
+        } catch (err) {
+          window.alert("Failed to save book to library: " + String(err));
           return;
         }
       }
