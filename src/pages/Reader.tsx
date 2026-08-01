@@ -1,5 +1,3 @@
-import { open } from "@tauri-apps/plugin-dialog";
-import { readFile, writeFile, remove, BaseDirectory } from "@tauri-apps/plugin-fs";
 import { useState, useCallback, useRef, useEffect } from 'react';
 import ePub from 'epubjs';
 import EpubViewer, { type EpubViewerHandle } from "../components/EpubViewer";
@@ -11,6 +9,18 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useLibrary } from "../hooks/useLibrary";
 import { useFlashcards } from "../hooks/useFlashcards";
 import { useSettings } from "../contexts/SettingsContext";
+import {
+  pickEpub,
+  saveBookBytes,
+  loadBookBytes,
+  deleteBookBytes,
+  deleteCover,
+  saveCoverBytes,
+  exportLibrary,
+  saveLibraryFile,
+  importLibrary,
+  pickLibraryFile,
+} from "../services/bookStorage";
 
 function basename(path: string) {
   const parts = path.replace(/[/\\]$/, "").split(/[/\\]/);
@@ -33,7 +43,7 @@ async function extractCover(book: any, id: string): Promise<string | undefined> 
     const resp = await fetch(coverResource.href);
     const blob = await resp.blob();
     const buf = await blob.arrayBuffer();
-    await writeFile(name, new Uint8Array(buf), { baseDir: BaseDirectory.AppData });
+    await saveCoverBytes(name, new Uint8Array(buf));
     return name;
   } catch (err) {
     window.alert("Failed to save cover image: " + String(err));
@@ -43,8 +53,8 @@ async function extractCover(book: any, id: string): Promise<string | undefined> 
 
 function Reader() {
     const { fontSize } = useSettings();
-    const { books, addBook, removeBook, updateBookLocation } = useLibrary();
-    const { flashcards, addFlashcard, updateFlashcardStats, removeFlashcard } = useFlashcards();
+    const { books, addBook, removeBook, replaceBooks, updateBookLocation } = useLibrary();
+    const { flashcards, addFlashcard, updateFlashcardStats, removeFlashcard, replaceFlashcards } = useFlashcards();
     const viewerRef = useRef<EpubViewerHandle>(null);
     const [filePath, setFilePath] = useState<string | null>(null);
     const [view, setView] = useState<"reader" | "library" | "flashcards">("library");
@@ -83,25 +93,19 @@ function Reader() {
     const { translate, translating } = useTranslation();
 
     async function openFile() {
-        let file: string | null;
+        let picked;
         try {
-            file = await open({
-                filters: [
-                    {
-                        name: "EPUB",
-                        extensions: ["epub"]
-                    }
-                ]
-            });
+            picked = await pickEpub();
         } catch (err) {
             console.error("File dialog failed:", err);
             window.alert("Failed to open file dialog: " + String(err));
             return;
         }
 
-        if (typeof file !== "string") return;
+        if (!picked) return;
 
-        const bytes = await readFile(file);
+        const bytes = picked.bytes;
+        const name = picked.name;
 
         let title: string;
         let author: string;
@@ -109,10 +113,10 @@ function Reader() {
         try {
           book = await ePub(bytes, {});
           const meta = book.metadata;
-          title = meta.title || basename(file);
+          title = meta.title || basename(name);
           author = meta.creator || meta.publisher || "Unknown Author";
         } catch {
-          title = basename(file);
+          title = basename(name);
           author = "Unknown Author";
         }
 
@@ -130,7 +134,7 @@ function Reader() {
         const id = crypto.randomUUID();
         const storageName = `${id}.epub`;
         try {
-          await writeFile(storageName, bytes, { baseDir: BaseDirectory.AppData });
+          await saveBookBytes(storageName, bytes);
         } catch (err) {
           window.alert("Failed to save book to library: " + String(err));
           return;
@@ -150,10 +154,10 @@ function Reader() {
 
       if (isAbsolutePath(path)) {
         try {
-          const bytes = await readFile(path);
+          const bytes = await loadBookBytes(path);
           const id = crypto.randomUUID();
           const storageName = `${id}.epub`;
-          await writeFile(storageName, bytes, { baseDir: BaseDirectory.AppData });
+          await saveBookBytes(storageName, bytes);
           path = storageName;
         } catch (err) {
           window.alert("Failed to save book to library: " + String(err));
@@ -176,6 +180,29 @@ function Reader() {
       setPopup(null);
       setView("flashcards");
     }, []);
+
+    const handleExport = useCallback(async () => {
+      try {
+        const json = await exportLibrary(books, flashcards);
+        await saveLibraryFile(json);
+      } catch (err) {
+        console.error("Export failed:", err);
+        window.alert("Failed to export library: " + String(err));
+      }
+    }, [books, flashcards]);
+
+    const handleImport = useCallback(async () => {
+      try {
+        const json = await pickLibraryFile();
+        if (!json) return;
+        const imported = await importLibrary(json);
+        replaceBooks(imported.books);
+        replaceFlashcards(imported.flashcards);
+      } catch (err) {
+        console.error("Import failed:", err);
+        window.alert("Failed to import library: " + String(err));
+      }
+    }, [replaceBooks, replaceFlashcards]);
 
     const handleTextSelected = useCallback(
       async (text: string, x: number, y: number, viewerWidth?: number) => {
@@ -209,9 +236,9 @@ function Reader() {
       const book = books.find((b) => b.id === bookId);
       if (book) {
         try {
-          await remove(book.filePath, { baseDir: BaseDirectory.AppData });
+          await deleteBookBytes(book.filePath);
           if (book.coverPath) {
-            await remove(book.coverPath, { baseDir: BaseDirectory.AppData });
+            await deleteCover(book.coverPath);
           }
         } catch {}
       }
@@ -226,6 +253,8 @@ function Reader() {
               onOpenFile={openFile}
               onGoToLibrary={handleGoToLibrary}
               onGoToFlashcards={handleGoToFlashcards}
+              onExport={handleExport}
+              onImport={handleImport}
             />
             <div style={{ flex: 1, display: "flex", flexDirection: "column", position: "relative", minHeight: 0 }}>
               <div style={{

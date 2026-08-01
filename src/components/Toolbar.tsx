@@ -5,6 +5,8 @@ type ToolbarProps = {
     onOpenFile: () => void;
     onGoToLibrary?: () => void;
     onGoToFlashcards?: () => void;
+    onExport?: () => void;
+    onImport?: () => void;
 };
 
 const btnStyle: React.CSSProperties = {
@@ -19,7 +21,7 @@ const btnStyle: React.CSSProperties = {
   transition: "all 0.15s",
 };
 
-function Toolbar({ onOpenFile, onGoToLibrary, onGoToFlashcards }: ToolbarProps) {
+function Toolbar({ onOpenFile, onGoToLibrary, onGoToFlashcards, onExport, onImport }: ToolbarProps) {
     const [menuOpen, setMenuOpen] = useState(false);
     const gearRef = useRef<HTMLButtonElement>(null);
 
@@ -52,6 +54,16 @@ function Toolbar({ onOpenFile, onGoToLibrary, onGoToFlashcards }: ToolbarProps) 
             <button onClick={onGoToFlashcards} style={btnStyle}>
               Flashcards
             </button>
+            {onExport && (
+              <button onClick={onExport} style={btnStyle}>
+                Export
+              </button>
+            )}
+            {onImport && (
+              <button onClick={onImport} style={btnStyle}>
+                Import
+              </button>
+            )}
             <div style={{ flex: 1 }} />
             <button
                 ref={gearRef}

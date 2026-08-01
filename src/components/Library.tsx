@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { readFile, BaseDirectory } from "@tauri-apps/plugin-fs";
+import { loadCoverBytes } from "../services/bookStorage";
 import { type LibraryBook } from "../hooks/useLibrary";
 
 type LibraryProps = {
@@ -18,9 +18,9 @@ function CoverImage({ coverPath }: { coverPath?: string }) {
     let cancelled = false;
     (async () => {
       try {
-        const bytes = await readFile(coverPath, { baseDir: BaseDirectory.AppData });
+        const bytes = await loadCoverBytes(coverPath);
         if (cancelled) return;
-        const blob = new Blob([bytes]);
+        const blob = new Blob([bytes.slice().buffer]);
         setUrl(URL.createObjectURL(blob));
       } catch {}
     })();

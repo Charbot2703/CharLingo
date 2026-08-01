@@ -3,7 +3,7 @@ import { LatencyOptimisedTranslator } from "@mkljczk/bergamot-translator/transla
 
 const translator = new LatencyOptimisedTranslator(
   { from: "es", to: "en" },
-  { workerUrl: "/worker/translator-worker.js" },
+  { workerUrl: `${import.meta.env.BASE_URL}worker/translator-worker.js` },
 );
 
 export function useTranslation() {

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import ePub from 'epubjs';
-import { readFile, BaseDirectory } from '@tauri-apps/plugin-fs';
+import { loadBookBytes } from '../services/bookStorage';
 
 (window as any).ePub = ePub;
 
@@ -149,9 +149,9 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
     async function loadBook() {
       let fileBytes;
       try {
-        fileBytes = await readFile(fp, { baseDir: BaseDirectory.AppData });
+        fileBytes = await loadBookBytes(fp);
       } catch {
-        fileBytes = await readFile(fp);
+        return;
       }
       if (cancelled) return;
 

@@ -75,5 +75,10 @@ export function useFlashcards() {
     });
   }, []);
 
-  return { flashcards, addFlashcard, updateFlashcardStats, removeFlashcard };
+  const replaceFlashcards = useCallback((next: Flashcard[]) => {
+    saveFlashcards(next);
+    setFlashcards(next);
+  }, []);
+
+  return { flashcards, addFlashcard, updateFlashcardStats, removeFlashcard, replaceFlashcards };
 }

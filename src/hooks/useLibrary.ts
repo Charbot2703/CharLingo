@@ -66,6 +66,11 @@ export function useLibrary() {
     });
   }, []);
 
+  const replaceBooks = useCallback((next: LibraryBook[]) => {
+    saveLibrary(next);
+    setBooks(next);
+  }, []);
+
   const updateBookLocation = useCallback((id: string, cfi: string) => {
     setBooks((prev) => {
       const updated = prev.map((b) =>
@@ -76,5 +81,5 @@ export function useLibrary() {
     });
   }, []);
 
-  return { books, addBook, removeBook, updateBookLocation };
+  return { books, addBook, removeBook, replaceBooks, updateBookLocation };
 }
