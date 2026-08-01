@@ -4,6 +4,11 @@ This application is a little personal project I made to assist in my Spanish jou
 
 The app currently only support EPUB files, I plan to support PDFs in the future as well. 
 
+## Website
+
+Due to the limits of being able to properly create an iOS version, I decided a website deployment would also be a nice option. Everything should function the same.
+https://charbot2703.github.io/CharLingo/
+
 ## Installing 
 
 There are versions for Android devices, Windows, macOS, and Linux, all available on the release page. I can only personally test the Android, Windows, and Linux versions so I make no promise of the macOS one fully functioning every release.
@@ -36,6 +41,9 @@ From here, you can tap each card to see the translation again and review, or you
 The quiz will go through all of your cards, unless you quit early, and will ask you for the English translations of the Spanish words and phrases you saved.
 At the end, you will have a small summary of your performance. <img width="980" height="621" alt="image" src="https://github.com/user-attachments/assets/808668ad-f959-4ba7-8d9e-c42107e00f10" />
 You'll also see that your flashcards now have counters to show how often you've gotten them right out of all of the times you saw it in a quiz. You can sort the flashcard list by this statistic to see your worst words.
+
+As of version 0.2.0, there are also export and import options available. The goal of this was to help support transitions between versions of the app or website.
+These buttons operate on JSON files, and will carry the EPUBs in your library, along with the flashcards you've created.
 
 The corner of the taskbar also has a settings wheel, which is pretty straight forward. 
 
