@@ -154,7 +154,7 @@ function Library({ books, onOpenBook, onRemoveBook }: LibraryProps) {
       >
         <div style={{ fontSize: 48, opacity: 0.3 }}>📚</div>
         <p style={{ color: "var(--text-secondary)", fontSize: 15, maxWidth: 300, lineHeight: 1.5 }}>
-          No books yet. Open an EPUB file to add it to your library.
+          No books yet. Open an EPUB or PDF file to add it to your library.
         </p>
       </div>
     );

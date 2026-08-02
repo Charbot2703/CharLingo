@@ -7,6 +7,7 @@ type TranslationPopupProps = {
   viewerWidth?: number;
   fontSize: number;
   onClose: () => void;
+  onOutsideClick?: () => void;
   onSaveFlashcard?: (original: string, translation: string) => void;
 };
 
@@ -17,6 +18,7 @@ function TranslationPopup({
   viewerWidth,
   fontSize,
   onClose,
+  onOutsideClick,
   onSaveFlashcard,
 }: TranslationPopupProps) {
   const cardRef = useRef<HTMLDivElement>(null);
@@ -25,12 +27,12 @@ function TranslationPopup({
     if (!original) return;
     const handler = (e: MouseEvent) => {
       if (cardRef.current && !cardRef.current.contains(e.target as Node)) {
-        onClose();
+        onOutsideClick?.();
       }
     };
     setTimeout(() => window.addEventListener("mousedown", handler), 0);
     return () => window.removeEventListener("mousedown", handler);
-  }, [original, onClose]);
+  }, [original, onOutsideClick]);
 
   if (!original) return null;
 
