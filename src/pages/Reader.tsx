@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react';
 import ePub from 'epubjs';
-import EpubViewer, { type EpubViewerHandle } from "../components/EpubViewer";
+import { getDocument as getPdfDocument } from "pdfjs-dist";
+import EpubViewer from "../components/EpubViewer";
+import PdfViewer from "../components/PdfViewer";
 import Toolbar from "../components/Toolbar";
 import TranslationPopup from "../components/TranslationPopup";
 import Library from "../components/Library";
@@ -10,7 +12,7 @@ import { useLibrary } from "../hooks/useLibrary";
 import { useFlashcards } from "../hooks/useFlashcards";
 import { useSettings } from "../contexts/SettingsContext";
 import {
-  pickEpub,
+  pickBook,
   saveBookBytes,
   loadBookBytes,
   deleteBookBytes,
@@ -22,9 +24,15 @@ import {
   pickLibraryFile,
 } from "../services/bookStorage";
 
+type ViewerHandle = { clearHighlight: () => void };
+
 function basename(path: string) {
   const parts = path.replace(/[/\\]$/, "").split(/[/\\]/);
-  return parts[parts.length - 1].replace(/\.epub$/i, "");
+  return parts[parts.length - 1].replace(/\.[^.]+$/, "");
+}
+
+function getBookFormat(path: string): "epub" | "pdf" {
+  return /\.pdf$/i.test(path) ? "pdf" : "epub";
 }
 
 function isAbsolutePath(p: string) {
@@ -51,11 +59,34 @@ async function extractCover(book: any, id: string): Promise<string | undefined> 
   }
 }
 
+async function extractPdfCover(bytes: Uint8Array, id: string): Promise<string | undefined> {
+  try {
+    const task = getPdfDocument({ data: bytes.slice() });
+    const pdf = await task.promise;
+    const page = await pdf.getPage(1);
+    const viewport = page.getViewport({ scale: 0.5 });
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width;
+    canvas.height = viewport.height;
+    await page.render({ canvas, viewport }).promise;
+    task.destroy();
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/png"));
+    if (!blob) return;
+    const buf = await blob.arrayBuffer();
+    const name = `covers/${id}.png`;
+    await saveCoverBytes(name, new Uint8Array(buf));
+    return name;
+  } catch (err) {
+    window.alert("Failed to save cover image: " + String(err));
+    return;
+  }
+}
+
 function Reader() {
     const { fontSize } = useSettings();
     const { books, addBook, removeBook, replaceBooks, updateBookLocation } = useLibrary();
     const { flashcards, addFlashcard, updateFlashcardStats, removeFlashcard, replaceFlashcards } = useFlashcards();
-    const viewerRef = useRef<EpubViewerHandle>(null);
+    const viewerRef = useRef<ViewerHandle>(null);
     const [filePath, setFilePath] = useState<string | null>(null);
     const [view, setView] = useState<"reader" | "library" | "flashcards">("library");
     const [popup, setPopup] = useState<{
@@ -95,7 +126,7 @@ function Reader() {
     async function openFile() {
         let picked;
         try {
-            picked = await pickEpub();
+            picked = await pickBook();
         } catch (err) {
             console.error("File dialog failed:", err);
             window.alert("Failed to open file dialog: " + String(err));
@@ -106,15 +137,26 @@ function Reader() {
 
         const bytes = picked.bytes;
         const name = picked.name;
+        const format = getBookFormat(name);
 
         let title: string;
         let author: string;
         let book: any;
         try {
-          book = await ePub(bytes, {});
-          const meta = book.metadata;
-          title = meta.title || basename(name);
-          author = meta.creator || meta.publisher || "Unknown Author";
+          if (format === "pdf") {
+            const task = getPdfDocument({ data: bytes.slice() });
+            const pdf = await task.promise;
+            const meta = await pdf.getMetadata();
+            const info = (meta.info ?? {}) as { Title?: string; Author?: string };
+            title = info.Title || basename(name);
+            author = info.Author || "Unknown Author";
+            task.destroy();
+          } else {
+            book = await ePub(bytes, {});
+            const meta = book.metadata;
+            title = meta.title || basename(name);
+            author = meta.creator || meta.publisher || "Unknown Author";
+          }
         } catch {
           title = basename(name);
           author = "Unknown Author";
@@ -132,7 +174,7 @@ function Reader() {
 
         // Copy to app data so it's readable in future sessions
         const id = crypto.randomUUID();
-        const storageName = `${id}.epub`;
+        const storageName = `${id}.${format === "pdf" ? "pdf" : "epub"}`;
         try {
           await saveBookBytes(storageName, bytes);
         } catch (err) {
@@ -140,7 +182,11 @@ function Reader() {
           return;
         }
 
-        const storedCoverPath = book ? await extractCover(book, id) : undefined;
+        const storedCoverPath = format === "pdf"
+          ? await extractPdfCover(bytes, id)
+          : book
+            ? await extractCover(book, id)
+            : undefined;
 
         addBook({ filePath: storageName, title, author, coverPath: storedCoverPath });
         setFilePath(storageName);
@@ -156,7 +202,7 @@ function Reader() {
         try {
           const bytes = await loadBookBytes(path);
           const id = crypto.randomUUID();
-          const storageName = `${id}.epub`;
+          const storageName = `${id}.${getBookFormat(path) === "pdf" ? "pdf" : "epub"}`;
           await saveBookBytes(storageName, bytes);
           path = storageName;
         } catch (err) {
@@ -222,6 +268,10 @@ function Reader() {
       setPopup(null);
     }, []);
 
+    const handleOutsideClick = useCallback(() => {
+      setPopup(null);
+    }, []);
+
     const handleSaveFlashcard = useCallback(
       (original: string, translation: string) => {
         const title = books.find((b) => b.filePath === filePath)?.title ?? "Unknown";
@@ -263,15 +313,27 @@ function Reader() {
                           flexDirection: "column", 
                           minHeight: 0, 
                           }}>
-                <EpubViewer
-                  ref={viewerRef}
-                  filePath={filePath}
-                  fontSize={fontSize}
-                  darkMode={isDark}
-                  initialLocation={initialLocation}
-                  onLocationChange={handleLocationChange}
-                  onTextSelected={handleTextSelected}
-                />
+                {filePath && getBookFormat(filePath) === "pdf" ? (
+                  <PdfViewer
+                    ref={viewerRef}
+                    filePath={filePath}
+                    fontSize={fontSize}
+                    darkMode={isDark}
+                    initialLocation={initialLocation}
+                    onLocationChange={handleLocationChange}
+                    onTextSelected={handleTextSelected}
+                  />
+                ) : (
+                  <EpubViewer
+                    ref={viewerRef}
+                    filePath={filePath}
+                    fontSize={fontSize}
+                    darkMode={isDark}
+                    initialLocation={initialLocation}
+                    onLocationChange={handleLocationChange}
+                    onTextSelected={handleTextSelected}
+                  />
+                )}
               </div>
               <div style={{ flex: 1, display: view === "library" ? "flex" : "none", flexDirection: "column", minHeight: 0 }}>
                 <Library
@@ -316,6 +378,7 @@ function Reader() {
                 viewerWidth={popup.viewerWidth}
                 fontSize={fontSize}
                 onClose={handleClosePopup}
+                onOutsideClick={handleOutsideClick}
                 onSaveFlashcard={handleSaveFlashcard}
               />
             )}
