@@ -53,6 +53,17 @@ function injectViewerStyles(rendition: any, dark: boolean) {
   }
 }
 
+function safeDestroyBook(book: any) {
+  if (!book) return;
+  try {
+    // epubjs 0.4.2: book.destroy() -> epub.destroy() -> book.destroy() infinite loop.
+    // Call the underlying Book.destroy directly instead.
+    book._destroy?.();
+  } catch (err) {
+    console.error("Failed to destroy epub book:", err);
+  }
+}
+
 const navBtnStyle: React.CSSProperties = {
   background: "transparent",
   border: "1px solid var(--border)",
@@ -136,7 +147,7 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
       bookRef.current = null;
       setTimeout(() => {
         oldRendition?.destroy?.();
-        oldBook?.destroy?.();
+        safeDestroyBook(oldBook);
       }, 0);
     }
 
@@ -156,7 +167,7 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
       if (cancelled) return;
 
       const book = await ePub(fileBytes, {});
-      if (cancelled) { book.destroy?.(); return; }
+      if (cancelled) { safeDestroyBook(book); return; }
 
       bookRef.current = book;
       const size = containerSizeRef.current;
@@ -340,7 +351,7 @@ const EpubViewer = forwardRef<EpubViewerHandle, EpubViewerProps>(
     return () => {
       renditionRef.current?.destroy?.();
       renditionRef.current = null;
-      bookRef.current?.destroy?.();
+      safeDestroyBook(bookRef.current);
       bookRef.current = null;
     };
   }, []);

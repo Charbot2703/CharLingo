@@ -14,16 +14,16 @@ function basename(path: string): string {
 
 type PickedFile = { name: string; bytes: Uint8Array };
 
-export async function pickEpub(): Promise<PickedFile | null> {
+export async function pickBook(): Promise<PickedFile | null> {
   if (isTauri()) {
     const file = await open({
-      filters: [{ name: "EPUB", extensions: ["epub"] }],
+      filters: [{ name: "Books", extensions: ["epub", "pdf"] }],
     });
     if (typeof file !== "string") return null;
     const bytes = await readFile(file);
     return { name: basename(file), bytes };
   }
-  return pickWebFile(".epub,application/epub+zip");
+  return pickWebFile(".epub,application/epub+zip,.pdf,application/pdf");
 }
 
 function pickWebFile(accept: string): Promise<PickedFile | null> {
