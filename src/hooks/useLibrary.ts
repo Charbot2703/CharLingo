@@ -81,5 +81,17 @@ export function useLibrary() {
     });
   }, []);
 
-  return { books, addBook, removeBook, replaceBooks, updateBookLocation };
+  const updateBookFile = useCallback((id: string, filePath: string, title?: string) => {
+    setBooks((prev) => {
+      const updated = prev.map((b) =>
+        b.id === id
+          ? { ...b, filePath, ...(title !== undefined ? { title } : {}) }
+          : b,
+      );
+      saveLibrary(updated);
+      return updated;
+    });
+  }, []);
+
+  return { books, addBook, removeBook, replaceBooks, updateBookLocation, updateBookFile };
 }
