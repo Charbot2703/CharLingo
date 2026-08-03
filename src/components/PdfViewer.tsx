@@ -71,6 +71,9 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     const [initialized, setInitialized] = useState(false);
     const containerSizeRef = useRef({ width: 0, height: 0 });
     const loadedPathRef = useRef<string | null>(null);
+    const touchStartRef = useRef<{ x: number; y: number; t: number } | null>(null);
+    const touchSwipedRef = useRef(false);
+    const touchHandledPopup = useRef(false);
 
     const darkModeRef = useRef(darkMode);
     darkModeRef.current = darkMode;
@@ -262,6 +265,11 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
     }, [currentPage, numPages]);
 
     const handleMouseUp = useCallback(() => {
+      if (touchSwipedRef.current || touchHandledPopup.current) {
+        touchSwipedRef.current = false;
+        touchHandledPopup.current = false;
+        return;
+      }
       const sel = window.getSelection();
       const text = sel?.toString().trim();
       if (!text || !sel || sel.isCollapsed) return;
@@ -272,11 +280,60 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
       onTextSelectedRef.current?.(text, rect.x, rect.y, viewerWidth);
     }, []);
 
+    const handleTouchStart = useCallback((e: React.TouchEvent) => {
+      const touch = e.changedTouches[0];
+      touchStartRef.current = { x: touch.screenX, y: touch.screenY, t: Date.now() };
+      touchSwipedRef.current = false;
+      touchHandledPopup.current = false;
+    }, []);
+
+    const handleTouchEnd = useCallback(
+      (e: React.TouchEvent) => {
+        const start = touchStartRef.current;
+        touchStartRef.current = null;
+        window.dispatchEvent(new CustomEvent("viewer-interaction"));
+        const touch = e.changedTouches[0];
+
+        if (start) {
+          const deltaX = touch.screenX - start.x;
+          const deltaY = touch.screenY - start.y;
+          const elapsed = Date.now() - start.t;
+          const threshold = 40;
+          if (elapsed < 300 && Math.abs(deltaX) > threshold && Math.abs(deltaX) > Math.abs(deltaY) * 1.5) {
+            touchSwipedRef.current = true;
+            if (deltaX < 0) {
+              setCurrentPage((p) => Math.min(numPages || 1, p + 1));
+            } else {
+              setCurrentPage((p) => Math.max(1, p - 1));
+            }
+          }
+        }
+
+        if (!touchSwipedRef.current) {
+          const sel = window.getSelection();
+          const text = sel?.toString().trim();
+          if (text && sel && !sel.isCollapsed) {
+            const range = sel.getRangeAt(0);
+            const rect = range.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              const viewerWidth = viewerRef.current?.clientWidth ?? 0;
+              onTextSelectedRef.current?.(text, rect.x, rect.y, viewerWidth);
+            }
+          }
+        }
+
+        touchHandledPopup.current = true;
+      },
+      [numPages],
+    );
+
     return (
       <div style={{ display: "flex", flexDirection: "column", flex: 1, minHeight: 0 }}>
         <div
           ref={viewerRef}
           onMouseUp={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
           style={{
             flex: 1,
             position: "relative",
@@ -286,6 +343,7 @@ const PdfViewer = forwardRef<PdfViewerHandle, PdfViewerProps>(
             justifyContent: "center",
             padding: `${PAGE_PADDING}px`,
             boxSizing: "border-box",
+            touchAction: "pan-y",
           }}
         >
           <div
