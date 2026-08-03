@@ -35,8 +35,39 @@ function getBookFormat(path: string): "epub" | "pdf" {
   return /\.pdf$/i.test(path) ? "pdf" : "epub";
 }
 
+function detectBookFormat(bytes: Uint8Array): "epub" | "pdf" | null {
+  if (
+    bytes.length >= 5 &&
+    bytes[0] === 0x25 && // '%'
+    bytes[1] === 0x50 && // 'P'
+    bytes[2] === 0x44 && // 'D'
+    bytes[3] === 0x46 && // 'F'
+    bytes[4] === 0x2d //  '-'
+  ) {
+    return "pdf";
+  }
+  if (
+    bytes.length >= 4 &&
+    bytes[0] === 0x50 && // 'P'
+    bytes[1] === 0x4b && // 'K'
+    bytes[2] === 0x03 && // '\x03'
+    bytes[3] === 0x04 // '\x04'
+  ) {
+    return "epub";
+  }
+  return null;
+}
+
 function isAbsolutePath(p: string) {
   return p.startsWith("/") || /^[A-Z]:\\/i.test(p);
+}
+
+function friendlyBookName(path: string, format: "epub" | "pdf"): string {
+  const decoded = decodeURIComponent(path);
+  const candidate = basename(decoded).replace(/\.[^.]+$/, "");
+  const cleaned = candidate.replace(/^(primary|msf|document|downloads|external)[:%][^/]*$/i, "");
+  if (cleaned && !/^document%|%3A/.test(cleaned)) return cleaned;
+  return format === "pdf" ? "Untitled PDF" : "Untitled EPUB";
 }
 
 async function extractCover(book: any, id: string): Promise<string | undefined> {
@@ -84,7 +115,7 @@ async function extractPdfCover(bytes: Uint8Array, id: string): Promise<string | 
 
 function Reader() {
     const { fontSize } = useSettings();
-    const { books, addBook, removeBook, replaceBooks, updateBookLocation } = useLibrary();
+    const { books, addBook, removeBook, replaceBooks, updateBookLocation, updateBookFile } = useLibrary();
     const { flashcards, addFlashcard, updateFlashcardStats, removeFlashcard, replaceFlashcards } = useFlashcards();
     const viewerRef = useRef<ViewerHandle>(null);
     const [filePath, setFilePath] = useState<string | null>(null);
@@ -137,7 +168,7 @@ function Reader() {
 
         const bytes = picked.bytes;
         const name = picked.name;
-        const format = getBookFormat(name);
+        const format = detectBookFormat(bytes) ?? getBookFormat(name);
 
         let title: string;
         let author: string;
@@ -197,25 +228,37 @@ function Reader() {
     const handleOpenBook = useCallback(async (book: import("../hooks/useLibrary").LibraryBook) => {
       let path = book.filePath;
       let coverPath = book.coverPath;
+      let title = book.title;
 
-      if (isAbsolutePath(path)) {
-        try {
-          const bytes = await loadBookBytes(path);
+      try {
+        const bytes = await loadBookBytes(path);
+        const detected = detectBookFormat(bytes);
+        if (isAbsolutePath(path) || (detected && getBookFormat(path) !== detected)) {
           const id = crypto.randomUUID();
-          const storageName = `${id}.${getBookFormat(path) === "pdf" ? "pdf" : "epub"}`;
+          const storageName = `${id}.${(detected ?? getBookFormat(path)) === "pdf" ? "pdf" : "epub"}`;
           await saveBookBytes(storageName, bytes);
+          if (detected && getBookFormat(path) !== detected && /document%|%3A|^content:/i.test(title)) {
+            title = friendlyBookName(path, detected);
+          }
+          updateBookFile(book.id, storageName, title);
+          const oldIsStorage = !isAbsolutePath(path) && !/^content:\/\//i.test(path);
+          if (oldIsStorage) {
+            try {
+              await deleteBookBytes(path);
+            } catch {}
+          }
           path = storageName;
-        } catch (err) {
-          window.alert("Failed to save book to library: " + String(err));
-          return;
         }
+      } catch (err) {
+        window.alert("Failed to save book to library: " + String(err));
+        return;
       }
 
-      addBook({ filePath: path, title: book.title, author: book.author, coverPath });
+      addBook({ filePath: path, title, author: book.author, coverPath });
       setFilePath(path);
       setView("reader");
       setPopup(null);
-    }, [addBook]);
+    }, [addBook, updateBookFile]);
 
     const handleGoToLibrary = useCallback(() => {
       setPopup(null);

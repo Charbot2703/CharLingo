@@ -1,5 +1,6 @@
 import { open, save } from "@tauri-apps/plugin-dialog";
 import { readFile, writeFile, remove, BaseDirectory } from "@tauri-apps/plugin-fs";
+import { invoke } from "@tauri-apps/api/core";
 import { type LibraryBook } from "../hooks/useLibrary";
 import { type Flashcard } from "../hooks/useFlashcards";
 
@@ -12,6 +13,13 @@ function basename(path: string): string {
   return parts[parts.length - 1];
 }
 
+function friendlyName(path: string): string | null {
+  const decoded = decodeURIComponent(basename(path)).replace(/\.[^.]+$/, "");
+  const cleaned = decoded.replace(/^(primary|msf|document|downloads|external)[:%][^/]*$/i, "");
+  if (cleaned && !/^document%|%3A/.test(cleaned)) return cleaned;
+  return null;
+}
+
 type PickedFile = { name: string; bytes: Uint8Array };
 
 export async function pickBook(): Promise<PickedFile | null> {
@@ -21,7 +29,21 @@ export async function pickBook(): Promise<PickedFile | null> {
     });
     if (typeof file !== "string") return null;
     const bytes = await readFile(file);
-    return { name: basename(file), bytes };
+    let name = basename(file);
+    if (/^content:\/\//i.test(file)) {
+      try {
+        const display = await invoke<string | null>("get_display_name", { uri: file });
+        if (display && display.trim()) name = display;
+        else {
+          const friendly = friendlyName(file);
+          if (friendly) name = friendly;
+        }
+      } catch {
+        const friendly = friendlyName(file);
+        if (friendly) name = friendly;
+      }
+    }
+    return { name, bytes };
   }
   return pickWebFile(".epub,application/epub+zip,.pdf,application/pdf");
 }
